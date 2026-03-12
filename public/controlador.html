@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎛️ Controlador — Concert Lights</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --accent: #7c6aff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .brand {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  .brand span { color: var(--accent); }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .status-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #3a3a4a;
+    transition: background 0.3s;
+  }
+
+  .status-pill.connected .dot { background: #4ade80; box-shadow: 0 0 8px #4ade8080; }
+  .status-pill.connected { color: #4ade80; border-color: rgba(74,222,128,0.2); }
+
+  main {
+    flex: 1;
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+    max-width: 1100px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* Color preview */
+  #preview {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 12px;
+    background: #1a1a2e;
+    border: 1px solid var(--border);
+    transition: background 0.3s ease;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #preview .preview-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+  }
+
+  /* Color grid */
+  .colors-title {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .color-swatch {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.15s, border-color 0.15s;
+    position: relative;
+  }
+
+  .color-swatch:hover { transform: scale(1.08); }
+  .color-swatch.active { border-color: white; transform: scale(1.05); }
+  .color-swatch.active::after {
+    content: '✓';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: rgba(255,255,255,0.9);
+  }
+
+  /* Custom color */
+  .custom-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .custom-row label { font-size: 13px; color: var(--muted); }
+
+  input[type="color"] {
+    width: 48px; height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  /* Brightness */
+  .slider-row { margin-bottom: 24px; }
+  .slider-row .top { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .slider-row .top span { font-size: 13px; color: var(--muted); }
+  .slider-row .top strong { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--text); }
+
+  input[type="range"] {
+    width: 100%;
+    appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 10px rgba(124,106,255,0.5);
+  }
+
+  /* Effects */
+  .effects-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .effect-btn {
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: left;
+  }
+
+  .effect-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(124,106,255,0.08); }
+  .effect-btn.active { background: rgba(124,106,255,0.15); border-color: var(--accent); color: var(--text); }
+
+  /* Send button */
+  #send-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    letter-spacing: 0.02em;
+  }
+
+  #send-btn:hover { opacity: 0.9; }
+  #send-btn:active { transform: scale(0.98); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Right sidebar */
+  .sidebar { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Connection setup */
+  .input-group { margin-bottom: 16px; }
+  .input-group label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
+  .input-group input {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus { border-color: var(--accent); }
+
+  #connect-btn {
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    color: var(--accent);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #connect-btn:hover { background: rgba(124,106,255,0.1); }
+
+  /* Clients list */
+  .client-list { display: flex; flex-direction: column; gap: 6px; }
+  .client-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .client-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
+  .empty-clients { font-size: 13px; color: var(--muted); text-align: center; padding: 20px 0; }
+
+  /* Log */
+  .log {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    max-height: 120px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .log-entry { padding: 3px 0; border-bottom: 1px solid var(--border); }
+  .log-entry.ok { color: #4ade80; }
+  .log-entry.info { color: var(--accent); }
+  .log-entry.warn { color: #fbbf24; }
+
+  /* Demo mode notice */
+  .demo-notice {
+    background: rgba(124,106,255,0.08);
+    border: 1px solid rgba(124,106,255,0.2);
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .demo-notice strong { color: var(--accent); }
+
+  @media (max-width: 700px) {
+    main { grid-template-columns: 1fr; padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span>◈</span> Concert Lights — Controlador</div>
+  <div class="status-pill" id="status-pill">
+    <div class="dot"></div>
+    <span id="status-text">Desconectado</span>
+  </div>
+</header>
+
+<main>
+  <!-- Left: color controls -->
+  <div>
+    <div class="panel" style="margin-bottom: 24px;">
+      <div class="panel-label">Vista previa</div>
+      <div id="preview">
+        <span class="preview-label">Sin color activo</span>
+      </div>
+
+      <div class="colors-title">Colores rápidos</div>
+      <div class="color-grid" id="color-grid"></div>
+
+      <div class="custom-row">
+        <label>Color personalizado</label>
+        <input type="color" id="custom-color" value="#ff6600">
+        <button class="effect-btn" style="flex:1" onclick="selectCustomColor()">Usar este color</button>
+      </div>
+
+      <div class="slider-row">
+        <div class="top">
+          <span>Brillo</span>
+          <strong id="brightness-val">100%</strong>
+        </div>
+        <input type="range" id="brightness" min="10" max="100" value="100">
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <div class="colors-title">Efectos</div>
+        <div class="effects-grid">
+          <button class="effect-btn" onclick="setEffect('solid')">⬛ Sólido</button>
+          <button class="effect-btn" onclick="setEffect('pulse')">💫 Pulso</button>
+          <button class="effect-btn" onclick="setEffect('strobe')">⚡ Estrobo</button>
+          <button class="effect-btn" onclick="setEffect('fade')">🌅 Fade</button>
+        </div>
+      </div>
+
+      <button id="send-btn" onclick="sendColor()">Enviar a todos los celulares</button>
+    </div>
+  </div>
+
+  <!-- Right: connection + clients -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="panel-label">Conexión WebSocket</div>
+      <div class="demo-notice" style="margin-bottom: 16px;" id="demo-notice">
+        <strong>Modo demo local</strong><br>
+        Abre <strong>audiencia.html</strong> en otra pestaña para probar. En producción se conecta automáticamente.
+      </div>
+      <div class="input-group">
+        <label>Servidor WebSocket</label>
+        <input type="text" id="ws-url" value="ws://localhost:3001" placeholder="ws://tu-servidor:3001">
+      </div>
+      <button id="connect-btn" onclick="toggleConnect()">Conectar</button>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Celulares conectados (<span id="client-count">0</span>)</div>
+      <div class="client-list" id="client-list">
+        <div class="empty-clients">Ningún celular conectado aún</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-label">Log</div>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+const PALETTE = [
+  '#ff2244','#ff6600','#ffcc00','#00ff88','#00ccff','#6644ff',
+  '#ff44cc','#ffffff','#88ffee','#ff8844','#44ff44','#4488ff',
+  '#ff0088','#00ffff','#ffff00','#ff4400','#8800ff','#00ff00'
+];
+
+let selectedColor = '#ff2244';
+let selectedEffect = 'solid';
+let ws = null;
+let clients = new Set();
+const channel = new BroadcastChannel('concert_lights');
+channel.onmessage = (e) => { applyCommand(e.data); };
+
+// Auto-detect: si estamos en un servidor real, conectar automáticamente
+function getAutoWsUrl() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${location.host}`;
+}
+
+const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+if (!isLocal) {
+  // Producción: ocultar demo notice y auto-conectar
+  document.getElementById('demo-notice').style.display = 'none';
+  document.getElementById('ws-url').value = getAutoWsUrl();
+  setTimeout(() => toggleConnect(), 500);
+}
+
+// Build palette
+const grid = document.getElementById('color-grid');
+PALETTE.forEach((c, i) => {
+  const sw = document.createElement('div');
+  sw.className = 'color-swatch' + (i === 0 ? ' active' : '');
+  sw.style.background = c;
+  sw.dataset.color = c;
+  sw.onclick = () => selectColor(c, sw);
+  grid.appendChild(sw);
+});
+
+function selectColor(color, el) {
+  selectedColor = color;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  if (el) el.classList.add('active');
+  updatePreview();
+  log(`Color seleccionado: ${color}`, 'info');
+}
+
+function selectCustomColor() {
+  const c = document.getElementById('custom-color').value;
+  selectColor(c, null);
+}
+
+function setEffect(e) {
+  selectedEffect = e;
+  document.querySelectorAll('.effect-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  log(`Efecto: ${e}`, 'info');
+}
+
+function updatePreview() {
+  const brightness = parseInt(document.getElementById('brightness').value) / 100;
+  const preview = document.getElementById('preview');
+  preview.style.background = selectedColor;
+  preview.style.opacity = 0.4 + brightness * 0.6;
+  preview.querySelector('.preview-label').style.display = 'none';
+}
+
+document.getElementById('brightness').addEventListener('input', function() {
+  document.getElementById('brightness-val').textContent = this.value + '%';
+  updatePreview();
+});
+
+function sendColor() {
+  const brightness = parseInt(document.getElementById('brightness').value) / 100;
+  const payload = {
+    type: 'color_command',
+    color: selectedColor,
+    brightness,
+    effect: selectedEffect,
+    timestamp: Date.now()
+  };
+
+  // Demo local via BroadcastChannel
+  channel.postMessage(payload);
+  log(`Enviado → ${selectedColor} [${selectedEffect}]`, 'ok');
+
+  // WebSocket real (si conectado)
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(payload));
+  }
+
+  // Visual feedback
+  const btn = document.getElementById('send-btn');
+  btn.textContent = '✓ Enviado!';
+  btn.style.background = '#4ade80';
+  setTimeout(() => {
+    btn.textContent = 'Enviar a todos los celulares';
+    btn.style.background = '';
+  }, 1000);
+}
+
+function toggleConnect() {
+  const url = document.getElementById('ws-url').value;
+  if (ws) {
+    ws.close();
+    ws = null;
+    document.getElementById('connect-btn').textContent = 'Conectar';
+    setPillStatus(false, 'Desconectado');
+    return;
+  }
+  try {
+    ws = new WebSocket(url);
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: 'controller_hello' }));
+      setPillStatus(true, 'Conectado');
+      log('WebSocket conectado', 'ok');
+      document.getElementById('connect-btn').textContent = 'Desconectar';
+    };
+    ws.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.type === 'client_join') addClient(d.id);
+      if (d.type === 'client_leave') removeClient(d.id);
+      if (d.type === 'client_count') updateClientCount(d.count);
+    };
+    ws.onerror = () => log('Error de conexión WS', 'warn');
+    ws.onclose = () => {
+      setPillStatus(false, 'Desconectado');
+      document.getElementById('connect-btn').textContent = 'Conectar';
+      ws = null;
+    };
+  } catch(err) {
+    log('URL inválida', 'warn');
+  }
+}
+
+function setPillStatus(connected, text) {
+  const pill = document.getElementById('status-pill');
+  pill.classList.toggle('connected', connected);
+  document.getElementById('status-text').textContent = text;
+}
+
+function addClient(id) {
+  clients.add(id);
+  renderClients();
+}
+
+function removeClient(id) {
+  clients.delete(id);
+  renderClients();
+}
+
+function updateClientCount(n) {
+  document.getElementById('client-count').textContent = n;
+}
+
+function renderClients() {
+  const list = document.getElementById('client-list');
+  document.getElementById('client-count').textContent = clients.size;
+  if (clients.size === 0) {
+    list.innerHTML = '<div class="empty-clients">Ningún celular conectado aún</div>';
+    return;
+  }
+  list.innerHTML = [...clients].map(id =>
+    `<div class="client-item"><div class="client-dot"></div>${id.substring(0,16)}</div>`
+  ).join('');
+}
+
+function log(msg, type = '') {
+  const el = document.getElementById('log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry ' + type;
+  const time = new Date().toLocaleTimeString('es', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+  entry.textContent = `${time}  ${msg}`;
+  el.prepend(entry);
+  if (el.children.length > 30) el.lastChild.remove();
+}
+
+// Init
+log('Controlador listo', 'info');
+log('Usa BroadcastChannel para demo local', '');
+updatePreview();
+</script>
+</body>
+</html>
