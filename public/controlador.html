@@ -72,7 +72,7 @@
     flex: 1;
     padding: 32px;
     display: grid;
-    grid-template-columns: 1fr 320px;
+    grid-template-columns: 1fr 300px;
     gap: 24px;
     max-width: 1100px;
     width: 100%;
@@ -95,7 +95,6 @@
     margin-bottom: 20px;
   }
 
-  /* Color preview */
   #preview {
     width: 100%;
     aspect-ratio: 16/9;
@@ -119,7 +118,6 @@
     text-transform: uppercase;
   }
 
-  /* Color grid */
   .colors-title {
     font-size: 13px;
     color: var(--muted);
@@ -155,7 +153,6 @@
     color: rgba(255,255,255,0.9);
   }
 
-  /* Custom color */
   .custom-row {
     display: flex;
     align-items: center;
@@ -174,7 +171,6 @@
     padding: 2px;
   }
 
-  /* Brightness */
   .slider-row { margin-bottom: 24px; }
   .slider-row .top { display: flex; justify-content: space-between; margin-bottom: 8px; }
   .slider-row .top span { font-size: 13px; color: var(--muted); }
@@ -198,7 +194,6 @@
     box-shadow: 0 0 10px rgba(124,106,255,0.5);
   }
 
-  /* Effects */
   .effects-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -222,7 +217,6 @@
   .effect-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(124,106,255,0.08); }
   .effect-btn.active { background: rgba(124,106,255,0.15); border-color: var(--accent); color: var(--text); }
 
-  /* Send button */
   #send-btn {
     width: 100%;
     padding: 14px;
@@ -240,43 +234,9 @@
 
   #send-btn:hover { opacity: 0.9; }
   #send-btn:active { transform: scale(0.98); }
-  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-  /* Right sidebar */
   .sidebar { display: flex; flex-direction: column; gap: 20px; }
 
-  /* Connection setup */
-  .input-group { margin-bottom: 16px; }
-  .input-group label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 6px; }
-  .input-group input {
-    width: 100%;
-    padding: 10px 12px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-  .input-group input:focus { border-color: var(--accent); }
-
-  #connect-btn {
-    width: 100%;
-    padding: 10px;
-    background: transparent;
-    border: 1px solid var(--accent);
-    border-radius: 8px;
-    color: var(--accent);
-    font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  #connect-btn:hover { background: rgba(124,106,255,0.1); }
-
-  /* Clients list */
   .client-list { display: flex; flex-direction: column; gap: 6px; }
   .client-item {
     display: flex;
@@ -292,7 +252,6 @@
   .client-dot { width: 6px; height: 6px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
   .empty-clients { font-size: 13px; color: var(--muted); text-align: center; padding: 20px 0; }
 
-  /* Log */
   .log {
     font-family: 'Space Mono', monospace;
     font-size: 11px;
@@ -308,19 +267,6 @@
   .log-entry.info { color: var(--accent); }
   .log-entry.warn { color: #fbbf24; }
 
-  /* Demo mode notice */
-  .demo-notice {
-    background: rgba(124,106,255,0.08);
-    border: 1px solid rgba(124,106,255,0.2);
-    border-radius: 10px;
-    padding: 14px;
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.6;
-  }
-
-  .demo-notice strong { color: var(--accent); }
-
   @media (max-width: 700px) {
     main { grid-template-columns: 1fr; padding: 16px; }
   }
@@ -332,12 +278,11 @@
   <div class="brand"><span>◈</span> Concert Lights — Controlador</div>
   <div class="status-pill" id="status-pill">
     <div class="dot"></div>
-    <span id="status-text">Desconectado</span>
+    <span id="status-text">Conectando…</span>
   </div>
 </header>
 
 <main>
-  <!-- Left: color controls -->
   <div>
     <div class="panel" style="margin-bottom: 24px;">
       <div class="panel-label">Vista previa</div>
@@ -376,21 +321,8 @@
     </div>
   </div>
 
-  <!-- Right: connection + clients -->
+  <!-- Sidebar: solo estado y log, sin controles de conexión -->
   <div class="sidebar">
-    <div class="panel">
-      <div class="panel-label">Conexión WebSocket</div>
-      <div class="demo-notice" style="margin-bottom: 16px;" id="demo-notice">
-        <strong>Modo demo local</strong><br>
-        Abre <strong>audiencia.html</strong> en otra pestaña para probar. En producción se conecta automáticamente.
-      </div>
-      <div class="input-group">
-        <label>Servidor WebSocket</label>
-        <input type="text" id="ws-url" value="ws://localhost:3001" placeholder="ws://tu-servidor:3001">
-      </div>
-      <button id="connect-btn" onclick="toggleConnect()">Conectar</button>
-    </div>
-
     <div class="panel">
       <div class="panel-label">Celulares conectados (<span id="client-count">0</span>)</div>
       <div class="client-list" id="client-list">
@@ -416,24 +348,48 @@ let selectedColor = '#ff2244';
 let selectedEffect = 'solid';
 let ws = null;
 let clients = new Set();
-const channel = new BroadcastChannel('concert_lights');
-channel.onmessage = (e) => { applyCommand(e.data); };
 
-// Auto-detect: si estamos en un servidor real, conectar automáticamente
-function getAutoWsUrl() {
+// BroadcastChannel para demo local (misma máquina)
+const channel = new BroadcastChannel('concert_lights');
+
+// ── Conexión automática ──────────────────────────────────────────────────────
+function getWsUrl() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${location.host}`;
 }
 
-const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-if (!isLocal) {
-  // Producción: ocultar demo notice y auto-conectar
-  document.getElementById('demo-notice').style.display = 'none';
-  document.getElementById('ws-url').value = getAutoWsUrl();
-  setTimeout(() => toggleConnect(), 500);
+function connect() {
+  const url = getWsUrl();
+  ws = new WebSocket(url);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'controller_hello' }));
+    setPillStatus(true, 'Conectado');
+    log('Servidor conectado', 'ok');
+  };
+
+  ws.onmessage = (e) => {
+    try {
+      const d = JSON.parse(e.data);
+      if (d.type === 'client_join')   addClient(d.id);
+      if (d.type === 'client_leave')  removeClient(d.id);
+      if (d.type === 'client_count')  updateClientCount(d.count);
+    } catch {}
+  };
+
+  ws.onerror = () => log('Error de conexión', 'warn');
+
+  ws.onclose = () => {
+    setPillStatus(false, 'Reconectando…');
+    // Reintentar cada 3 segundos automáticamente
+    setTimeout(connect, 3000);
+  };
 }
 
-// Build palette
+// Iniciar conexión al cargar
+connect();
+
+// ── Paleta ───────────────────────────────────────────────────────────────────
 const grid = document.getElementById('color-grid');
 PALETTE.forEach((c, i) => {
   const sw = document.createElement('div');
@@ -449,7 +405,7 @@ function selectColor(color, el) {
   document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
   if (el) el.classList.add('active');
   updatePreview();
-  log(`Color seleccionado: ${color}`, 'info');
+  log(`Color: ${color}`, 'info');
 }
 
 function selectCustomColor() {
@@ -487,16 +443,16 @@ function sendColor() {
     timestamp: Date.now()
   };
 
-  // Demo local via BroadcastChannel
-  channel.postMessage(payload);
-  log(`Enviado → ${selectedColor} [${selectedEffect}]`, 'ok');
-
-  // WebSocket real (si conectado)
+  // Enviar por WebSocket
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(payload));
   }
 
-  // Visual feedback
+  // También BroadcastChannel para pruebas locales
+  channel.postMessage(payload);
+
+  log(`Enviado → ${selectedColor} [${selectedEffect}]`, 'ok');
+
   const btn = document.getElementById('send-btn');
   btn.textContent = '✓ Enviado!';
   btn.style.background = '#4ade80';
@@ -506,59 +462,15 @@ function sendColor() {
   }, 1000);
 }
 
-function toggleConnect() {
-  const url = document.getElementById('ws-url').value;
-  if (ws) {
-    ws.close();
-    ws = null;
-    document.getElementById('connect-btn').textContent = 'Conectar';
-    setPillStatus(false, 'Desconectado');
-    return;
-  }
-  try {
-    ws = new WebSocket(url);
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'controller_hello' }));
-      setPillStatus(true, 'Conectado');
-      log('WebSocket conectado', 'ok');
-      document.getElementById('connect-btn').textContent = 'Desconectar';
-    };
-    ws.onmessage = (e) => {
-      const d = JSON.parse(e.data);
-      if (d.type === 'client_join') addClient(d.id);
-      if (d.type === 'client_leave') removeClient(d.id);
-      if (d.type === 'client_count') updateClientCount(d.count);
-    };
-    ws.onerror = () => log('Error de conexión WS', 'warn');
-    ws.onclose = () => {
-      setPillStatus(false, 'Desconectado');
-      document.getElementById('connect-btn').textContent = 'Conectar';
-      ws = null;
-    };
-  } catch(err) {
-    log('URL inválida', 'warn');
-  }
-}
-
 function setPillStatus(connected, text) {
   const pill = document.getElementById('status-pill');
   pill.classList.toggle('connected', connected);
   document.getElementById('status-text').textContent = text;
 }
 
-function addClient(id) {
-  clients.add(id);
-  renderClients();
-}
-
-function removeClient(id) {
-  clients.delete(id);
-  renderClients();
-}
-
-function updateClientCount(n) {
-  document.getElementById('client-count').textContent = n;
-}
+function addClient(id)    { clients.add(id);    renderClients(); }
+function removeClient(id) { clients.delete(id); renderClients(); }
+function updateClientCount(n) { document.getElementById('client-count').textContent = n; }
 
 function renderClients() {
   const list = document.getElementById('client-list');
@@ -582,9 +494,7 @@ function log(msg, type = '') {
   if (el.children.length > 30) el.lastChild.remove();
 }
 
-// Init
-log('Controlador listo', 'info');
-log('Usa BroadcastChannel para demo local', '');
+log('Controlador iniciado', 'info');
 updatePreview();
 </script>
 </body>
