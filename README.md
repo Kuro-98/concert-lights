@@ -6,8 +6,8 @@ Sistema de sincronización de luces para conciertos vía WebSocket.
 
 | Página | URL |
 |---|---|
-| Audiencia (celulares) | `https://tu-app.railway.app/` |
-| Controlador (DJ) | `https://tu-app.railway.app/controlador.html` |
+| Audiencia (celulares) | `https://concert-lights-production.up.railway.app/` |
+| Controlador (DJ) | `https://concert-lights-production.up.railway.app/controlador.html` |
 
 ## Deploy en Railway (gratis, 5 min)
 
